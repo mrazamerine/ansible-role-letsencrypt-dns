@@ -1,0 +1,17 @@
+# LetsEncrypt-DNS tasks - nginx.yml
+---
+- name: create ssl config file
+  template:
+    src: ssl.conf.j2
+    dest: "/etc/nginx/snippets//ssl-{{ letsencrypt_domain_name }}.conf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: copy nginx ssl-params config file
+  copy:
+    src: ssl-params.conf
+    dest: /etc/nginx/snippets/ssl-params.conf
+    owner: root
+    group: root
+    mode: 0644

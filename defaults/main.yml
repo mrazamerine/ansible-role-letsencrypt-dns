@@ -1,0 +1,15 @@
+# LetsEncrypt-DNS defaults - main.yml
+---
+diffie_hellman_size: 2048
+
+letsencrypt_csr_city:
+
+letsencrypt_csr_country: US
+
+letsencrypt_csr_department: IT
+
+letsencrypt_csr_organization:
+
+letsencrypt_csr_state:
+
+letsencrypt_remaining_days: 15

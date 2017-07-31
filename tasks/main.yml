@@ -1,0 +1,179 @@
+# LetsEncrypt-DNS tasks - main.yml
+---
+- name: install required packages - letsencrypt
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - openssl
+    - python-boto
+
+- name: generate Diffie-Hellman group
+  command: openssl dhparam -out /etc/ssl/certs/dhparam.pem {{ diffie_hellman_size }}
+  args:
+    creates: /etc/ssl/certs/dhparam.pem
+
+- name: create letsencrypt directories (public)
+  file:
+    path: "/etc/letsencrypt/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    -
+    - csr
+    - renewal
+
+- name: create letsencrypt directories (private)
+  file:
+    path: "/etc/letsencrypt/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0700
+  with_items:
+    - accounts
+    - archive
+    - keys
+    - live
+
+- name: generate letsencrypt account private key
+  openssl_privatekey:
+    path: /etc/letsencrypt/keys/letsencrypt-account-key.pem
+    size: 4096
+    type: RSA
+    owner: root
+    group: root
+    mode: 0600
+    state: present
+
+- name: generate letsencrypt certificate private key
+  openssl_privatekey:
+    path: "/etc/letsencrypt/keys/{{ letsencrypt_domain_name }}.pem"
+    size: 4096
+    type: RSA
+    owner: root
+    group: root
+    mode: 0600
+    state: present
+
+- name: generate letsencrypt certificate signing request (csr)
+  command: openssl req -new -key "/etc/letsencrypt/keys/{{ letsencrypt_domain_name }}.pem" -out "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr" -subj "/C={{ letsencrypt_csr_country }}/ST={{ letsencrypt_csr_state }}/L={{ letsencrypt_csr_city }}/O={{ letsencrypt_csr_organization }}/OU={{ letsencrypt_csr_department }}/CN={{ letsencrypt_domain_name }}"
+  args:
+    creates: "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr"
+
+- name: set the letsencrypt csr file permissions
+  file:
+    path: "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr"
+    owner: root
+    group: root
+    mode: 0600
+
+- name: create letsencrypt certificate archive
+  file:
+    path: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: initiate the letsencrypt challenge
+  letsencrypt:
+    acme_directory: https://acme-v01.api.letsencrypt.org/directory
+    challenge: dns-01
+    account_key: /etc/letsencrypt/keys/letsencrypt-account-key.pem
+    csr: "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr"
+    dest: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/cert.pem"
+    account_email: "{{ letsencrypt_email }}"
+    remaining_days: "{{ letsencrypt_remaining_days }}"
+  register: letsencrypt_dns_challenge
+
+- name: create dns record for letsencrypt challenge
+  route53:
+    command: create
+    zone: "{{ letsencrypt_zone }}"
+    record: "_acme-challenge.{{ item.key }}"
+    type: TXT
+    ttl: 5
+    value: "\"{{ item.value['dns-01']['resource_value'] }}\""
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    overwrite: yes
+    wait: yes
+  with_dict: "{{ letsencrypt_dns_challenge['challenge_data'] | default({}) }}"
+
+- name: validate the letsencrypt challenge
+  letsencrypt:
+    acme_directory: https://acme-v01.api.letsencrypt.org/directory
+    challenge: dns-01
+    account_key: /etc/letsencrypt/keys/letsencrypt-account-key.pem
+    csr: "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr"
+    dest: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/cert.pem"
+    account_email: "{{ letsencrypt_email }}"
+    data: "{{ letsencrypt_dns_challenge }}"
+
+- name: delete dns record for letsencrypt challenge
+  route53:
+    command: delete
+    zone: "{{ letsencrypt_zone }}"
+    record: "_acme-challenge.{{ item.key }}"
+    type: TXT
+    ttl: 5
+    value: "\"{{ item.value['dns-01']['resource_value'] }}\""
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+  with_dict: "{{ letsencrypt_dns_challenge['challenge_data'] | default({}) }}"
+
+- name: copy private key to archive
+  copy:
+    remote_src: true
+    src: "/etc/letsencrypt/keys/{{ letsencrypt_domain_name }}.pem"
+    dest: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/privkey.pem"
+    owner: root
+    group: root
+    mode: 0644
+  register: letsencrypt_privkey_updated
+
+- name: download the letsencrypt intermediate CA
+  get_url:
+    url: https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem
+    dest: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/chain.pem"
+    owner: root
+    group: root
+    mode: 0644
+  register: letsencrypt_chain_updated
+
+- name: create full chain with private key and letsencrypt intermediate CA
+  shell: "cat /etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/privkey.pem /etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/chain.pem > /etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/fullchain.pem"
+  when: (letsencrypt_privkey_updated.changed) or
+        (letsencrypt_chain_updated.changed)
+
+- name: set the letsencrypt full chain permissions
+  file:
+    path: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/fullchain.pem"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: create live symlink directory
+  file:
+    path: "/etc/letsencrypt/live/{{ letsencrypt_domain_name }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: create live symlinks
+  file:
+    src: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/{{ item }}.pem"
+    dest: "/etc/letsencrypt/live/{{ letsencrypt_domain_name }}/{{ item }}.pem"
+    state: link
+  with_items:
+    - cert
+    - chain
+    - fullchain
+    - privkey
+
+- name: include webserver tasks
+  include: "{{ letsencrypt_webserver }}.yml"
