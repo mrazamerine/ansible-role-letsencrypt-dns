@@ -2,6 +2,8 @@
 ---
 diffie_hellman_size: 2048
 
+letsencrypt_agreement: https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf
+
 letsencrypt_csr_city:
 
 letsencrypt_csr_country: US

@@ -81,6 +81,7 @@
 - name: initiate the letsencrypt challenge
   letsencrypt:
     acme_directory: https://acme-v01.api.letsencrypt.org/directory
+    agreement: "{{ letsencrypt_agreement }}"
     challenge: dns-01
     account_key: /etc/letsencrypt/keys/letsencrypt-account-key.pem
     csr: "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr"
@@ -106,6 +107,7 @@
 - name: validate the letsencrypt challenge
   letsencrypt:
     acme_directory: https://acme-v01.api.letsencrypt.org/directory
+    agreement: "{{ letsencrypt_agreement }}"
     challenge: dns-01
     account_key: /etc/letsencrypt/keys/letsencrypt-account-key.pem
     csr: "/etc/letsencrypt/csr/{{ letsencrypt_domain_name }}.csr"
