@@ -11,6 +11,8 @@ Ansible role for generating a LetsEncrypt SSL certificate using a DNS challenge 
 
 * **diffie\_hellman\_size** – Diffie-Hellman group bit size (int) [2048]
 
+* **letsencrypt\_agreement** – LetsEncrypt agreement (string)
+
 * **letsencrypt\_csr\_city** – Certificate signing request city (string)
 
 * **letsencrypt\_csr\_country** – Certificate signing request country (string) [US]
