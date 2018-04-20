@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Letsencrypt-DNS Facts
+
+
+# Functions
+
+function is_installed {
+    dpkg-query -W "$1" 2>/dev/null | sed -n -e "s/$1//p"
+}
+
+
+# Facts
+
+echo [installed]
+
+echo docker_ce=$(is_installed "docker-ce")
+
+echo nginx=$(is_installed "nginx")

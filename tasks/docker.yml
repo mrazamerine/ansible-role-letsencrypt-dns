@@ -1,0 +1,30 @@
+# LetsEncrypt-DNS tasks - docker.yml
+---
+- name: create docker cert directory
+  file:
+    path: /etc/letsencrypt/docker
+    state: directory
+    owner: root
+    group: root
+    mode: 0600
+    unsafe_writes: yes
+
+- name: copy cert to docker cert directory
+  copy:
+    remote_src: true
+    src: "/etc/letsencrypt/archive/{{ letsencrypt_domain_name }}/cert.pem"
+    dest: "/etc/letsencrypt/docker/{{ letsencrypt_domain_name }}.crt"
+    owner: root
+    group: root
+    mode: 0644
+    unsafe_writes: yes
+
+- name: copy private key to docker cert directory
+  copy:
+    remote_src: true
+    src: "/etc/letsencrypt/keys/{{ letsencrypt_domain_name }}.pem"
+    dest: "/etc/letsencrypt/docker/{{ letsencrypt_domain_name }}.key"
+    owner: root
+    group: root
+    mode: 0644
+    unsafe_writes: yes

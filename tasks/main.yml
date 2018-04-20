@@ -1,5 +1,8 @@
 # LetsEncrypt-DNS tasks - main.yml
 ---
+- name: include facts tasks
+  include: facts.yml
+
 - name: install required packages - letsencrypt
   apt:
     name: "{{ item }}"
@@ -177,5 +180,12 @@
     - fullchain
     - privkey
 
-- name: include webserver tasks
-  include: "{{ letsencrypt_webserver }}.yml"
+# Additional tasks
+
+- name: include docker tasks
+  include: docker.yml
+  when: ansible_local.letsencrypt_dns.installed.docker_ce != ''
+
+- name: include nginx tasks
+  include: nginx.yml
+  when: ansible_local.letsencrypt_dns.installed.nginx !== ''
