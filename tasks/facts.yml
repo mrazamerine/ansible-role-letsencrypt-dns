@@ -5,10 +5,10 @@
     path: /etc/ansible/facts.d
     state: directory
 
-- name: apply letsencrypt_dns.fact template
-  template:
-    src: letsencrypt_dns.fact.j2
-    dest: "/etc/ansible/facts.d/letsencrypt_dns.fact"
+- name: copy letsencrypt-dns facts
+  copy:
+    src: letsencrypt_dns.fact
+    dest: /etc/ansible/facts.d/letsencrypt_dns.fact
     mode: 0755
   register: update_letsencrypt_dns_facts
 
