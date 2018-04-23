@@ -5,13 +5,13 @@ Ansible role for generating a LetsEncrypt SSL certificate using a DNS challenge 
 
 ## Variables
 
-* **aws\_access\_key** – AWS access key for Route 53 (string)
-
-* **aws\_secret\_key** – AWS secret key for Route 53 (string)
-
 * **diffie\_hellman\_size** – Diffie-Hellman group bit size (int) [2048]
 
 * **letsencrypt\_agreement** – LetsEncrypt agreement (string)
+
+* **letsencrypt\_aws\_access\_key** – AWS access key for Route 53 (string)
+
+* **letsencrypt\_aws\_secret\_key** – AWS secret key for Route 53 (string)
 
 * **letsencrypt\_csr\_city** – Certificate signing request city (string)
 
