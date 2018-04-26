@@ -188,4 +188,4 @@
 
 - name: include nginx tasks
   include: nginx.yml
-  when: ansible_local.letsencrypt_dns.installed.nginx !== ''
+  when: ansible_local.letsencrypt_dns.installed.nginx != ''
